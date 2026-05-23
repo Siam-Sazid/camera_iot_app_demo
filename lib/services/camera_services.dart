@@ -3,35 +3,55 @@ import 'package:permission_handler/permission_handler.dart';
 
 class CameraService {
   CameraController? _controller;
+  List<CameraDescription> _cameras = [];
   bool _isInitialized = false;
+
+  CameraController? get controller => _isInitialized ? _controller : null;
+  bool get isInitialized => _isInitialized;
 
   Future<void> initialize() async {
     final status = await Permission.camera.request();
     if (!status.isGranted) throw Exception('Camera permission denied');
 
-    final cameras = await availableCameras();
-    if (cameras.isEmpty) throw Exception('No cameras found');
+    _cameras = await availableCameras();
+    if (_cameras.isEmpty) throw Exception('No cameras found');
 
-    // ultraHigh maps to 4K on supported devices
+    await _reinitController(ResolutionPreset.high);
+  }
+
+  Future<void> _reinitController(ResolutionPreset preset) async {
+    await _controller?.dispose();
+    _isInitialized = false;
     _controller = CameraController(
-      cameras.first,
-      ResolutionPreset.ultraHigh,
+      _cameras.first,
+      preset,
       enableAudio: true,
+      imageFormatGroup: ImageFormatGroup.jpeg,
     );
-
     await _controller!.initialize();
     _isInitialized = true;
   }
 
-  CameraController? get controller => _isInitialized ? _controller : null;
-  bool get isInitialized => _isInitialized;
+  Future<void> switchResolution(ResolutionPreset preset) =>
+      _reinitController(preset);
+
+  Future<void> pause() async {
+    await _controller?.dispose();
+    _controller = null;
+    _isInitialized = false;
+  }
+
+  Future<void> resume() async {
+    if (_cameras.isEmpty) return;
+    await _reinitController(ResolutionPreset.high);
+  }
 
   Future<XFile?> takePicture() async {
     if (!_isInitialized) return null;
     return await _controller!.takePicture();
   }
 
-  Future<void> startVideoRecording(String path) async {
+  Future<void> startVideoRecording() async {
     if (!_isInitialized) return;
     await _controller!.startVideoRecording();
   }

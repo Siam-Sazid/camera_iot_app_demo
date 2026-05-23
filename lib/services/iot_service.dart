@@ -14,7 +14,7 @@ class LightIotService extends ChangeNotifier {
   Future<void> connect(String brokerUrl, String clientId) async {
     _client = MqttServerClient(brokerUrl, clientId);
     _client!.port = 1883;
-    _client!.keepAlivePeriod = 20;
+    _client!.keepAlivePeriod = 60;
     _client!.logging(on: false);
     _client!.onConnected = _onConnected;
     _client!.onDisconnected = _onDisconnected;
